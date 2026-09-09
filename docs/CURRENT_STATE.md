@@ -168,8 +168,8 @@ Não foi encontrada dependência direta de `compra_diaria` nas queries atuais de
 
 ## 6. Ordem de execução aprovada
 
-### CHANGE-001A — Estabilizar cadastro atual
-**Status:** PRÓXIMO PASSO
+### CHANGE-001A — Estabilização do cadastro atual
+Status: CONCLUÍDO — 09/09/2026
 
 Objetivo:
 corrigir bugs de leitura/salvamento sem fazer ainda a migração estrutural completa.
@@ -183,6 +183,11 @@ Fazer:
 6. corrigir Salvar + Anterior;
 7. não criar novas dependências de `compra_diaria`;
 8. evitar aprofundar lógica que será substituída pelo contexto por local.
+
+Cadastro validado no aplicativo e persistência confirmada diretamente no PostgreSQL/Supabase.
+
+Próxima mudança estrutural:
+CHANGE-002A — Contexto de estoque por local.
 
 ### ADR-006 / varredura
 **Status:** EM VALIDAÇÃO

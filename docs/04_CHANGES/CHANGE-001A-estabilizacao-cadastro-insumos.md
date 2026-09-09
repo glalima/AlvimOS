@@ -1,7 +1,7 @@
 # CHANGE-001A — Estabilização do cadastro de insumos
 
-**Status:** PRONTO PARA IMPLEMENTAÇÃO  
-**Data:** 09/09/2026  
+Status: CONCLUÍDO
+Data de conclusão: 09/09/2026
 **Domínio:** Insumos  
 **Prioridade:** P0
 
@@ -61,3 +61,26 @@ O cadastro/edição atual pode carregar estado incompleto e ainda contém regras
 
 ## Critério de aceite
 Cadastro atual confiável para uso até a migração do CHANGE-002A, sem perda silenciosa de configuração.
+
+## Resultado da implementação
+
+CHANGE concluído e validado em 09/09/2026.
+
+Foram validados no aplicativo:
+- carregamento correto dos dados dos insumos;
+- criação de insumo;
+- edição de insumo;
+- salvamento;
+- Salvar + Próximo;
+- Salvar + Anterior;
+- persistência das alterações.
+
+Também foi realizada validação direta no PostgreSQL/Supabase, confirmando que os valores editados pelo aplicativo foram persistidos corretamente.
+
+### Dívida conhecida
+
+Existem registros históricos em `meta_estoque` que podem não representar mais a política operacional atual do insumo.
+
+Exemplo: itens atualmente configurados como `compra_diaria = false` podem possuir metas históricas.
+
+Esses registros não foram apagados no CHANGE-001A. Sua classificação e migração serão tratadas no CHANGE-002A, pois `compra_diaria` está sendo descontinuada como critério arquitetural.
