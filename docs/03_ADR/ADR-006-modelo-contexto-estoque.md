@@ -1,4 +1,4 @@
-# ADR-006 — Contexto de estoque por local e semântica das chaves logísticas
+# ADR-006 — Contexto de estoque por local, chaves logísticas e herança por categoria
 
 **Status:** ACEITO  
 **Data:** 09/09/2026  
@@ -8,31 +8,51 @@
 
 ## 1. Contexto
 
-O modelo anterior utilizava `produzido_internamente`, `recebido_no_cd`, `enviado_loja` e `compra_diaria`. A evolução do sistema mostrou que `compra_diaria` misturava frequência de contagem, reposição da Loja e compras, enquanto os nomes das outras chaves não expressavam com precisão sua regra de negócio.
+O modelo anterior utilizava `produzido_internamente`, `recebido_no_cd`, `enviado_loja` e `compra_diaria`.
 
-A arquitetura passa a separar origem, local de controle, contagem, reposição e compra.
+A evolução do sistema mostrou que `compra_diaria` misturava responsabilidades de contagem, reposição e compras. Também ficou claro que um mesmo insumo pode ter comportamentos diferentes conforme o local físico onde é controlado.
 
-## 2. Decisão
+A arquitetura passa a separar:
+
+1. origem do insumo;
+2. local de controle de estoque;
+3. política de contagem;
+4. política de reposição;
+5. política de compra.
+
+## 2. Chaves logísticas globais
 
 ### `produzido_internamente`
-Pergunta: este insumo é produzido/obtido internamente e, portanto, não deve gerar compra de fornecedor?
 
+Pergunta de negócio:
+
+> Este insumo é produzido/obtido internamente e, portanto, não deve gerar compra de fornecedor?
+
+Regras:
 - `true` exclui o insumo do motor normal de compras externas;
 - `true` exige contexto CD.
 
 ### `recebido_externamente_no_cd`
+
 Substitui conceitualmente `recebido_no_cd`.
 
-Pergunta: este insumo comprado externamente é recebido e estocado no CD?
+Pergunta de negócio:
 
+> Este insumo comprado externamente é recebido e estocado no CD?
+
+Regras:
 - `true` exige contexto CD;
 - compras externas usam o contexto CD.
 
 ### `controlado_na_loja`
+
 Substitui conceitualmente `enviado_loja`.
 
-Pergunta: este insumo precisa ter saldo físico controlado na Loja?
+Pergunta de negócio:
 
+> Este insumo precisa ter saldo físico controlado na Loja?
+
+Regras:
 - `true` exige contexto LOJA;
 - não significa necessariamente transporte CD → Loja;
 - fornecedor pode entregar diretamente à Loja.
@@ -50,65 +70,179 @@ CONTEXTO LOJA
 
 Contexto representa onde o estoque é controlado fisicamente.
 
-## 4. Exemplos
+## 4. Exemplo de contextos
 
-**Tampa 550 ml:** `false / true / true` → CD + LOJA. CD por volume; Loja pode usar META_DIA.
+### Tampa 550 ml
 
-**Tomate inteiro:** `false / true / false` → somente CD.
+```text
+produzido_internamente = false
+recebido_externamente_no_cd = true
+controlado_na_loja = true
 
-**Produzido internamente e controlado na Loja:** `true / false / true` → CD + LOJA e fora das compras externas.
+→ contexto CD
+→ contexto LOJA
+```
 
-**Coca entregue diretamente pelo fornecedor na Loja:** `false / false / true` → somente LOJA; compra externa abastece Loja.
+### Tomate inteiro
 
-## 5. Reposição
+```text
+false
+true
+false
 
-### CD
-Sempre por VOLUME:
+→ somente contexto CD
+```
+
+### Produzido internamente e controlado na Loja
+
+```text
+true
+false
+true
+
+→ contexto CD
+→ contexto LOJA
+→ fora das compras externas
+```
+
+### Compra entregue diretamente à Loja
+
+```text
+false
+false
+true
+
+→ somente contexto LOJA
+→ compra externa abastece Loja
+```
+
+## 5. Regra do CD
+
+O CD opera sempre por **VOLUME**.
 
 ```text
 saldo <= estoque_gatilho
 → necessidade = estoque_ideal - saldo
 ```
 
-### Loja
-Pode operar por:
+Não existe política `META_DIA` para reposição do CD.
 
-- `VOLUME`: `estoque_gatilho` + `estoque_ideal`;
-- `META_DIA`: meta física por dia da semana.
+## 6. Regra da Loja
+
+A Loja pode operar por:
+
+### `VOLUME`
+
+Usa:
+- `estoque_gatilho`;
+- `estoque_ideal`.
+
+### `META_DIA`
+
+Usa metas físicas por dia da semana:
 
 ```text
 necessidade = MAX(meta_do_dia - saldo_loja, 0)
 ```
 
-## 6. Contagem
+## 7. Política padrão por categoria
 
-Contagem é independente da reposição.
+Cada categoria pertence a um único local operacional.
+
+A categoria passa a ser a **fonte do comportamento padrão** dos insumos daquele grupo.
+
+A tabela `categorias` passa a armazenar:
+
+- `modo_reposicao_padrao`
+- `dias_contagem_padrao`
+- `ativo_contagem`
+
+A categoria não armazena gatilho nem estoque ideal, pois esses valores continuam específicos do insumo/contexto.
+
+### Regra de herança
+
+O contexto do insumo pode sobrescrever os defaults da categoria.
+
+```text
+POLÍTICA EFETIVA
+=
+override do contexto do insumo
+?? padrão da categoria
+```
+
+Portanto:
 
 ```text
 CATEGORIA + LOCAL
-→ política padrão
+→ define o padrão
 
 INSUMO + LOCAL
-→ override opcional
+→ define somente a exceção
 ```
 
-## 7. `compra_diaria`
+Se o override estiver `NULL`, o sistema herda a política da categoria.
 
-`compra_diaria` está **DEPRECATED** e não deve participar de novas regras.
+## 8. Overrides por contexto
 
-Permanece temporariamente por compatibilidade até a migração completa. A existência de `meta_estoque` histórica não prova que o item atualmente opere por `META_DIA`.
+`insumo_contexto_estoque` deve conter apenas overrides opcionais das políticas herdáveis, por exemplo:
 
-## 8. Contexto por local
+- `modo_reposicao_loja_override`
+- `dias_contagem_override`
 
-`insumo_contexto_estoque` passa a representar a configuração operacional por `CD` ou `LOJA`.
+O contexto não deve duplicar automaticamente o valor efetivo da categoria.
 
-Contém categoria, política/override de contagem, parâmetros de volume, modo de reposição da Loja e estado de ativação durante a migração.
+Isso evita centenas de configurações repetidas e permite alterar uma política operacional de toda uma categoria de forma centralizada.
 
-O setor é derivado de `categorias.setor`, evitando duplicação.
+## 9. Política de contagem
 
-## 9. Metas
+Contagem é independente da política de reposição.
 
-`meta_estoque_contexto` representa metas do contexto LOJA:
+Uma categoria pode ser:
+
+```text
+modo_reposicao_padrao = VOLUME
+dias_contagem_padrao = {1,5}
+```
+
+ou:
+
+```text
+modo_reposicao_padrao = META_DIA
+dias_contagem_padrao = {1,2,3,4,5,6,7}
+```
+
+O insumo pode sobrescrever apenas os dias, apenas a reposição, ambos ou nenhum.
+
+## 10. `compra_diaria`
+
+`compra_diaria` está **DEPRECATED**.
+
+Não deve ser usada em novas regras de negócio.
+
+Permanece temporariamente no schema apenas por compatibilidade durante a migração.
+
+A existência de uma linha histórica em `meta_estoque` também não prova que o item opere atualmente por `META_DIA`.
+
+## 11. Contexto por local
+
+`insumo_contexto_estoque` representa a configuração operacional de um insumo em:
+
+- `CD`;
+- `LOJA`.
+
+O contexto contém:
+- categoria do local;
+- parâmetros de volume específicos daquele local;
+- overrides opcionais de política;
+- estado de ativação durante a migração.
+
+O setor é derivado da categoria.
+
+## 12. Metas por dia
+
+`meta_estoque_contexto` representa metas do contexto LOJA quando a política efetiva for `META_DIA`.
+
+Estrutura:
 
 ```text
 contexto_id
@@ -118,52 +252,84 @@ quantidade
 
 Metas não são obrigatórias para todo item controlado na Loja.
 
-## 10. Painel de Compras
+## 13. Painel de Compras
 
 ```text
 produzido_internamente = true
 → não gerar compra externa
 ```
 
-Para compra externa:
+Para compras externas:
 
 ```text
 recebido_externamente_no_cd = true
 → usar contexto CD
 ```
 
-Caso contrário, se `controlado_na_loja = true`, a compra pode abastecer diretamente a Loja.
+Caso contrário, se `controlado_na_loja = true`:
 
-Não usar `saldo_total` indiscriminadamente.
+```text
+→ compra pode abastecer diretamente o contexto LOJA
+```
 
-## 11. Migração e nomes físicos
+O Painel de Compras não deve usar `saldo_total` indiscriminadamente.
 
-A migração é progressiva. Durante a transição, os nomes físicos antigos continuam temporariamente:
+## 14. Migração e nomes físicos
+
+Durante a transição, os nomes antigos continuam fisicamente no banco:
 
 ```text
 recebido_no_cd → recebido_externamente_no_cd
 enviado_loja   → controlado_na_loja
 ```
 
-Nenhuma renomeação física ocorre antes da varredura de dependências e migração dos consumidores.
+A renomeação física ocorrerá somente depois da migração dos consumidores.
 
-## 12. Casos obrigatórios
+## 15. Estratégia de migração
+
+### Fase A
+Criar tabelas de contexto sem remover o modelo legado.
+
+### Fase B
+Popular contextos e consolidar políticas por categoria.
+
+A política não será inferida item a item a partir de `compra_diaria` ou de metas históricas.
+
+A regra oficial passa a ser:
+
+```text
+categoria → default
+contexto do insumo → override opcional
+```
+
+### Fases posteriores
+- migrar consumidores;
+- validar contagem;
+- validar reposição;
+- reconstruir compras;
+- remover dependências legadas;
+- renomear/remover colunas antigas.
+
+## 16. Casos obrigatórios de validação
 
 1. Coca-Cola 2L — Loja por VOLUME.
 2. Tampa 550 — CD por VOLUME + Loja por META_DIA.
 3. Tomate inteiro — somente CD.
 4. Compra entregue diretamente à Loja.
 5. Produzido internamente controlado no CD/Loja.
-6. Meta histórica que não representa mais política atual.
+6. Item com meta histórica que não representa mais política atual.
+7. Item que herda política da categoria sem override.
+8. Item que sobrescreve o padrão da categoria.
 
-## 13. Consequência
+## 17. Consequência arquitetural
 
 ```text
 INSUMO    → o que é / como se origina
 CONTEXTO  → onde o estoque é controlado
+CATEGORIA → comportamento operacional padrão
 CONTAGEM  → quando conferir
 REPOSIÇÃO → quanto recompor
 COMPRA    → quando e para qual local comprar
 ```
 
-Este modelo substitui a tentativa de fazer `compra_diaria` e nomes de fluxo responderem simultaneamente a essas perguntas.
+A arquitetura passa a privilegiar herança por categoria e exceções explícitas por contexto, reduzindo duplicação de configuração e lógica no frontend.
