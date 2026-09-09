@@ -12,7 +12,7 @@ ALVIM OS é a evolução do Painel Operacional do Alvim Delivery para uma camada
 
 Cadeia operacional:
 
-`PEDIDOS → CONSUMO → ESTOQUE → CONTAGEM → NECESSIDADE → REPOSIÇÃO → PRODUÇÃO → COMPRAS → FINANCEIRO → ANALYTICS`
+`PEDIDOS → CONSUMO → ESTOQUE → CONTAGEM → NECESSIDADE → REPOSIÇÃO → PRODUÇÃO → COMPRAS → FINANCEIRO → RESULTADO → APRENDIZADO → NOVAS REGRAS → OPERAÇÃO`
 
 Cadeia cliente:
 
