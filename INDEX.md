@@ -1,0 +1,30 @@
+# Índice de arquivos
+
+- `00_START_HERE.md`
+- `01_ARQUITETURA/MAPA_TECNICO_MASTER_v2_0.md`
+- `01_ARQUITETURA/VISAO_ALVIM_OS.md`
+- `02_DOMINIOS/COMPRAS.md`
+- `02_DOMINIOS/CONTAGEM.md`
+- `02_DOMINIOS/CRM.md`
+- `02_DOMINIOS/ESTOQUE_LEDGER.md`
+- `02_DOMINIOS/FINANCEIRO.md`
+- `02_DOMINIOS/IDENTIDADE_ACESSO.md`
+- `02_DOMINIOS/INSUMOS.md`
+- `02_DOMINIOS/INTEGRACOES.md`
+- `02_DOMINIOS/PRODUCAO.md`
+- `02_DOMINIOS/REPOSICAO.md`
+- `03_ADR/ADR-001-estoque-ledger.md`
+- `03_ADR/ADR-002-quatro-chaves-logisticas.md`
+- `03_ADR/ADR-003-meta-estoque-e-meta-loja.md`
+- `03_ADR/ADR-004-contexto-estoque-por-local.md`
+- `03_ADR/ADR-005-politica-contagem-por-local.md`
+- `04_CHANGES/CHANGE-000-ledger-contagem-rpcs.md`
+- `04_CHANGES/CHANGE-001-refatoracao-cadastro-insumos.md`
+- `04_CHANGES/CHANGE-002-contexto-e-contagem-por-local.md`
+- `04_CHANGES/CHANGE-003-painel-compras-sql.md`
+- `04_CHANGES/CHANGE-004-integracao-saipos-piloto.md`
+- `05_DATABASE/SCHEMA_E_GAPS.md`
+- `05_DATABASE/TAXONOMIA_MOVIMENTACOES.md`
+- `CURRENT_STATE.md`
+- `README.md`
+- `WORKFLOW_DOCUMENTACAO_IA.md`
