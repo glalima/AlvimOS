@@ -119,49 +119,33 @@ Validado:
 ---
 
 ## 6. CHANGE-002A
+### Fase B6 — CONCLUÍDA
 
-### Fase B5 — CONCLUÍDA
+Migradas as metas válidas do modelo legado para `meta_estoque_contexto`.
 
-Implementada a herança efetiva das políticas operacionais por contexto.
+Resultado:
+- 145 contextos LOJA com política efetiva `META_DIA`;
+- 1.015 metas normalizadas;
+- 7 dias por contexto;
+- 0 metas migradas para contextos `VOLUME`.
 
-Criada:
-- `vw_contexto_estoque_efetivo`
+As metas históricas dos 182 itens `VOLUME` permanecem em `meta_estoque`
+apenas como legado temporário e não possuem significado operacional no novo modelo.
 
-Regra oficial:
-
-`política efetiva = override do contexto ?? padrão da categoria`
-
-Para o CD:
-- política efetiva sempre `VOLUME`.
-
-Para contagem:
-
-`dias efetivos = dias_contagem_override ?? dias_contagem_padrao`
-
-Também foi ajustada a semântica do contexto:
-- `modo_reposicao_loja` → `modo_reposicao_override`;
-- o contexto passa a armazenar somente exceções;
-- a categoria é a fonte do comportamento padrão.
-
-Validação concluída:
-- nenhum contexto sem política efetiva;
-- nenhum contexto ativo para contagem sem dias efetivos;
-- nenhum contexto CD fora de `VOLUME`;
-- contextos LOJA herdando corretamente `VOLUME` ou `META_DIA` de suas categorias.
-
-Os consumidores atuais ainda não foram migrados para a nova view.
+O item MORANGO permanece com meta 0 nos sete dias, conforme configuração histórica.
 
 ### Próximo passo
 
-Migrar as metas históricas válidas para `meta_estoque_contexto`.
+Criar a fonte SQL comum das contagens Loja/CD usando:
+- contexto;
+- categoria;
+- setor;
+- saldo do local;
+- dias efetivos de contagem;
+- `deve_contar_hoje`;
+- meta do dia quando aplicável.
 
-Somente contextos:
-- `local = 'LOJA'`;
-- `modo_reposicao_efetivo = 'META_DIA'`
-
-podem receber metas no novo modelo.
-
-Metas históricas de itens cuja política atual é `VOLUME` não devem ser consideradas automaticamente válidas..
+Depois migrar as telas de contagem para consumir essa fonte.
 
 ## 7. Dívidas e legado ainda existentes
 
