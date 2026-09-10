@@ -120,49 +120,31 @@ Validado:
 
 ## 6. CHANGE-002A
 
-**Status: EM IMPLEMENTAÇÃO**
+### Fase B4 — CONCLUÍDA
 
-### Fase A — CONCLUÍDA
+Foi saneado o relacionamento entre contexto e categoria por local.
 
-Criadas:
+Resultado:
+- contexto LOJA referencia apenas categorias `tipo = 'LOJA'`;
+- contexto CD referencia apenas categorias `tipo = 'CD'`;
+- categorias legadas do CD foram remapeadas para a taxonomia oficial;
+- Heineken LN, Coca 600ml e Fruki 600ml foram corrigidos como entrega direta à Loja:
+  - `recebido_no_cd = false`;
+  - sem contexto CD;
+  - contexto LOJA preservado;
+- nenhum contexto permanece com categoria de local incompatível.
 
-- `insumo_contexto_estoque`
-- `meta_estoque_contexto`
-
-### Fase B2 — CONCLUÍDA
-
-Criados:
-
-- 140 contextos CD;
+Estado esperado após saneamento:
+- 137 contextos CD;
 - 327 contextos LOJA.
 
-Validações:
+### Próximo passo
 
-- esperado CD = criado CD;
-- esperado Loja = criado Loja;
-- nenhum contexto sem categoria na primeira migração;
-- todos permanecem `ativo = false`.
+Implementar herança efetiva das políticas:
 
-`gatilho/ideal = 0/0` é permitido temporariamente e representa parametrização ainda não definida.
+`override do contexto ?? padrão da categoria`
 
-### Fase B3 — CONCLUÍDA
-
-A tabela `categorias` agora possui:
-
-- `modo_reposicao_padrao`;
-- `dias_contagem_padrao`;
-- `ativo_contagem`.
-
-Regras:
-
-- CD = sempre `VOLUME`;
-- Loja = `VOLUME` ou `META_DIA`;
-- categoria define default;
-- contexto define override.
-
-Criada categoria específica `CIGARROS / CD`.
-
----
+Depois preparar migração das metas válidas e views SQL de contagem.
 
 ## 7. Dívidas e legado ainda existentes
 
