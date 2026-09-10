@@ -120,31 +120,48 @@ Validado:
 
 ## 6. CHANGE-002A
 
-### Fase B4 — CONCLUÍDA
+### Fase B5 — CONCLUÍDA
 
-Foi saneado o relacionamento entre contexto e categoria por local.
+Implementada a herança efetiva das políticas operacionais por contexto.
 
-Resultado:
-- contexto LOJA referencia apenas categorias `tipo = 'LOJA'`;
-- contexto CD referencia apenas categorias `tipo = 'CD'`;
-- categorias legadas do CD foram remapeadas para a taxonomia oficial;
-- Heineken LN, Coca 600ml e Fruki 600ml foram corrigidos como entrega direta à Loja:
-  - `recebido_no_cd = false`;
-  - sem contexto CD;
-  - contexto LOJA preservado;
-- nenhum contexto permanece com categoria de local incompatível.
+Criada:
+- `vw_contexto_estoque_efetivo`
 
-Estado esperado após saneamento:
-- 137 contextos CD;
-- 327 contextos LOJA.
+Regra oficial:
+
+`política efetiva = override do contexto ?? padrão da categoria`
+
+Para o CD:
+- política efetiva sempre `VOLUME`.
+
+Para contagem:
+
+`dias efetivos = dias_contagem_override ?? dias_contagem_padrao`
+
+Também foi ajustada a semântica do contexto:
+- `modo_reposicao_loja` → `modo_reposicao_override`;
+- o contexto passa a armazenar somente exceções;
+- a categoria é a fonte do comportamento padrão.
+
+Validação concluída:
+- nenhum contexto sem política efetiva;
+- nenhum contexto ativo para contagem sem dias efetivos;
+- nenhum contexto CD fora de `VOLUME`;
+- contextos LOJA herdando corretamente `VOLUME` ou `META_DIA` de suas categorias.
+
+Os consumidores atuais ainda não foram migrados para a nova view.
 
 ### Próximo passo
 
-Implementar herança efetiva das políticas:
+Migrar as metas históricas válidas para `meta_estoque_contexto`.
 
-`override do contexto ?? padrão da categoria`
+Somente contextos:
+- `local = 'LOJA'`;
+- `modo_reposicao_efetivo = 'META_DIA'`
 
-Depois preparar migração das metas válidas e views SQL de contagem.
+podem receber metas no novo modelo.
+
+Metas históricas de itens cuja política atual é `VOLUME` não devem ser consideradas automaticamente válidas..
 
 ## 7. Dívidas e legado ainda existentes
 
@@ -166,32 +183,18 @@ Os contextos ainda não são a fonte oficial das telas atuais.
 
 ---
 
-## 8. Próximo passo
-
-### CHANGE-002A — próxima fase
-
-Auditar e corrigir `categoria_id` dos contextos para garantir:
-
-- contexto `CD` → categoria `tipo = 'CD'`;
-- contexto `LOJA` → categoria `tipo = 'LOJA'`.
-
-Depois:
-
-1. implementar herança efetiva de política;
-2. migrar metas válidas para `meta_estoque_contexto`;
-3. preparar views SQL de contagem;
-4. migrar as duas telas de contagem;
-5. somente depois reconstruir o Painel de Compras.
-
----
-
 ## 9. Ordem macro
 
 CHANGE-001A ✅
-→ CHANGE-002A 🔄
+→ CHANGE-002A
+   A  ✅
+   B2 ✅
+   B3 ✅
+   B4 ✅
+   B5 ✅
+   próxima: migração das metas
 → CHANGE-002B
 → CHANGE-003
-
 Prioridade:
 
 CONSISTÊNCIA
