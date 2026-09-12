@@ -1,6 +1,6 @@
 # ALVIM DELIVERY — MAPA TÉCNICO MASTER v2.0
 
-**Data-base:** 06/09/2026  
+**Data-base:** 12/09/2026  
 **Status:** documento de navegação arquitetural  
 **Regra:** detalhes devem viver nos documentos de domínio e ADRs.
 
@@ -31,6 +31,14 @@ Funções TypeScript por domínio.
 ### Banco
 PostgreSQL/Supabase.
 
+### Automação / ingestão
+
+n8n self-hosted é utilizado em fluxos de integração e ingestão de dados.
+
+No fluxo de notas fiscais:
+
+`Google Drive → n8n → Gemini → Code JS → PostgreSQL/Supabase`
+
 ### Direção arquitetural
 Migrar lógica determinística e transacional do Retool/TypeScript para:
 - views;
@@ -51,39 +59,33 @@ Migrar lógica determinística e transacional do Retool/TypeScript para:
 6. CD
 7. Produção
 8. Compras
-9. Financeiro
-10. Pedidos
-11. Clientes
-12. CRM
-13. Integrações
-14. Analytics
-15. Auditoria
+9. Recebimento
+10. Financeiro 
+11. Pedidos
+12. Clientes
+13. CRM
+14. Integrações
+15. Analytics
+16. Auditoria
 
 ---
 
 ## 4. Cadastro de insumos
 
-Tabela atual:
+Tabela principal atual:
+
 `insumos`
 
-Campos logísticos principais:
-- `produzido_internamente`
-- `recebido_no_cd`
-- `enviado_loja`
-- `compra_diaria`
-- `estoque_minimo`
-- `gatilho_pedido`
-- `estoque_ideal`
+Características logísticas globais oficiais no modelo de transição:
+- `produzido_internamente`;
+- `recebido_no_cd`;
+- `enviado_loja`;
 
-Campos de classificação atuais:
-- `categoria`
-- `categoria_loja`
-- `categoria_cd`
-- `setores[]`
+`compra_diaria` permanece no schema apenas como legado/deprecated e não deve orientar novas regras.
 
-**Estado:** esses campos de classificação são considerados modelo transitório.
+Campos globais legados de classificação e reposição ainda existem temporariamente e devem ser removidos somente após ausência comprovada de consumidores.
 
-**Alvo:** contexto por local.
+O cadastro legado foi estabilizado na CHANGE-001A, mas a tela definitiva deverá operar por contexto de local.
 
 ---
 
@@ -223,6 +225,36 @@ motor 100% SQL, usando:
 
 ---
 
+### 12.1. Ingestão e conciliação de notas fiscais
+
+Este fluxo é complementar ao Motor de Compras. Ele não calcula a necessidade de compra; recebe e concilia uma compra/documento já existente.
+
+Pipeline atual validado:
+
+`Google Drive → n8n → Gemini → Code JS → PostgreSQL/Supabase → StockReconciliation → finalizar_entrada_compra() → movimentacoes_estoque → vw_estoque_master`
+
+Responsabilidades atuais:
+- n8n detecta e processa o arquivo da nota;
+- Gemini extrai os dados estruturados;
+- Code JS normaliza e valida os dados antes da persistência;
+- `compras` e `compra_itens` recebem a nota com entrada de estoque ainda pendente;
+- `StockReconciliation` faz o vínculo `descrição_nota → insumo`, fator de conversão e de-para;
+- `finalizar_entrada_compra()` registra a entrada física no ledger.
+
+Regra de preço adotada na ingestão:
+- `preco_total` = total líquido efetivo da linha;
+- `preco_unitario` = `preco_total / quantidade_comprada` quando o total da linha for confiável;
+- descontos globais da nota não devem ser rateados automaticamente entre os itens sem regra explícita.
+
+Regra de idempotência alvo:
+- a mesma `chave_acesso` não pode duplicar `compras`;
+- não pode duplicar `compra_itens`;
+- não pode reaplicar uma entrada física já concluída.
+
+**Gap confirmado em 12/09/2026:** a proteção atual evita duplicar a linha de `compras`, porém a reimportação da mesma nota ainda pode inserir novamente linhas em `compra_itens`. Correção em andamento na CHANGE-001B.
+
+---
+
 ## 13. Compras × Reposição
 
 Não confundir:
@@ -251,7 +283,11 @@ A função `finalizar_entrada_compra` já lança `ENTRADA_COMPRA`.
 
 ## 15. Integrações
 
-Saipos:
+### n8n / Google Drive / Gemini
+
+O pipeline de notas fiscais é uma integração operacional do domínio de Compras/Recebimento e está descrito na seção 12.1.
+
+### Saipos
 - API de Dados;
 - vendas;
 - estoque/movimentações;
